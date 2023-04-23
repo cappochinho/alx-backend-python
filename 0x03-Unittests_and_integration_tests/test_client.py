@@ -7,8 +7,9 @@ the client.py module
 
 import unittest
 from unittest.mock import MagicMock, patch
-from parameterized import parameterized
+from parameterized import parameterized, parameterized_class
 from client import GithubOrgClient
+from fixtures import org_payload, repos_payload, expected_repos, apache2_repos
 
 
 class TestGithubOrgClient(unittest.TestCase):
@@ -72,6 +73,35 @@ class TestGithubOrgClient(unittest.TestCase):
     def test_has_license(self, repo, license_key, expected_result):
         result = GithubOrgClient.has_license(repo, license_key)
         self.assertEqual(result, expected_result)
+
+
+class TestIntegrationGithubOrgClient(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.get_patcher = patch("requests.get")
+        cls.mock_get = cls.get_patcher.start()
+        cls.mock_get.side_effect = [
+            org_payload,
+            repos_payload,
+        ]
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.get_patcher.stop()
+
+    @parameterized_class([
+        {"license": None, "expected_repos": expected_repos},
+        {"license": "apache-2.0", "expected_repos": apache2_repos},
+    ])
+    class TestPublicRepos(unittest.TestCase):
+
+        def setUp(self):
+            self.client = GithubOrgClient("test_org")
+
+        def test_public_repos(self):
+            repos = self.client.public_repos(license=self.license)
+            self.assertEqual(repos, self.expected_repos)
 
 
 if __name__ == "__main__":
