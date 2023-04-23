@@ -43,21 +43,29 @@ class TestGithubOrgClient(unittest.TestCase):
         self.assertEqual(result, repos_url)
 
     @patch("client.get_json")
-    @patch.object(GithubOrgClient, "_public_repos_url", new_callable=MagicMock)
-    def test_public_repos(self, mock_public_repos_url, mock_get_json):
-        mock_public_repos_url.return_value = "https://api.github.com/orgs/test_org/repos"
-        mock_get_json.return_value = [
-            {"name": "repo1", "license": {"key": "my_license"}},
-            {"name": "repo2", "license": {"key": "other_license"}},
-            {"name": "repo3"}
+    def test_public_repos(self, mocked):
+        """test the public_repos function"""
+
+        mock_payload = [
+            {"name": "repo1", "license": {"key": "mit"}},
+            {"name": "repo2", "license": {"key": "apache"}},
+            {"name": "repo3", "license": None},
         ]
+        mocked.return_value = mock_payload
 
         client = GithubOrgClient("test_org")
-        repos = client.public_repos("my_license")
 
-        self.assertEqual(repos, ["repo1"])
-        mock_public_repos_url.assert_called_once()
-        mock_get_json.assert_called_once()
+        p_url = "_public_repos_url"
+        with patch.object(client, p_url, new_callable=MagicMock) as m_p_url:
+            m_p_url.return_value = "https://api.github.com/orgs/test_org/repos"
+            mock_has_license = MagicMock(return_value=True)
+
+            with patch.object(client, "has_license", mock_has_license):
+                result = client.public_repos("mit")
+
+                self.assertEqual(result, ["repo1"])
+                m_p_url.assert_called_once()
+                mock_has_license.assert_called_with(mock_payload[0], "mit")
 
     @parameterized.expand([
         [{"license": {"key": "my_license"}}, "my_license", True],
