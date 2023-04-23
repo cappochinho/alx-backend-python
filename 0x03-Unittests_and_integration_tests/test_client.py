@@ -43,19 +43,17 @@ class TestGithubOrgClient(unittest.TestCase):
         self.assertEqual(result, repos_url)
 
     @patch("client.get_json")
-    def test_public_repos(self, mocked):
-        """test the public_repos function"""
-
+    def test_public_repos(self, mock_get_json):
         mock_payload = [
             {"name": "repo1", "license": {"key": "mit"}},
             {"name": "repo2", "license": {"key": "apache"}},
             {"name": "repo3", "license": None},
         ]
-        mocked.return_value = mock_payload
+        mock_get_json.return_value = mock_payload
 
         client = GithubOrgClient("test_org")
-
         p_url = "_public_repos_url"
+
         with patch.object(client, p_url, new_callable=MagicMock) as m_p_url:
             m_p_url.return_value = "https://api.github.com/orgs/test_org/repos"
             mock_has_license = MagicMock(return_value=True)
